@@ -8,6 +8,7 @@ import { generateChangelogForPublish } from './changelog'
 import { generateEmbedding } from './embeddings'
 import { requireGitHubAccountAge } from './githubAccount'
 import type { PublicUser } from './public'
+import { handleScanResult, scanSkillFiles } from './skillScan'
 import {
   buildEmbeddingText,
   getFrontmatterMetadata,
@@ -113,6 +114,10 @@ export async function publishVersionForUser(
     if (otherFiles.length >= MAX_FILES_FOR_EMBEDDING) break
   }
 
+
+  const scanResult = await scanSkillFiles(ctx, safeFiles)
+  handleScanResult(scanResult)
+
   const embeddingText = buildEmbeddingText({
     frontmatter,
     readme: readmeText,
@@ -127,11 +132,11 @@ export async function publishVersionForUser(
     changelogSource === 'user'
       ? Promise.resolve(suppliedChangelog)
       : generateChangelogForPublish(ctx, {
-          slug,
-          version,
-          readmeText,
-          files: safeFiles.map((file) => ({ path: file.path, sha256: file.sha256 })),
-        })
+        slug,
+        version,
+        readmeText,
+        files: safeFiles.map((file) => ({ path: file.path, sha256: file.sha256 })),
+      })
 
   const embeddingPromise = generateEmbedding(embeddingText)
 
@@ -154,9 +159,9 @@ export async function publishVersionForUser(
     fingerprint,
     forkOf: args.forkOf
       ? {
-          slug: args.forkOf.slug.trim().toLowerCase(),
-          version: args.forkOf.version?.trim() || undefined,
-        }
+        slug: args.forkOf.slug.trim().toLowerCase(),
+        version: args.forkOf.version?.trim() || undefined,
+      }
       : undefined,
     files: safeFiles.map((file) => ({
       ...file,
